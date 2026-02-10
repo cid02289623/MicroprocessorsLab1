@@ -1,4 +1,4 @@
-; adapted from previous code and help from ChatGPT
+; UPDATED
 #include <xc.inc>
 
 psect code, abs
