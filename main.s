@@ -1,41 +1,87 @@
-	#include <xc.inc>
-	
-psect	code, abs
+; adapted from previous code and help from ChatGPT
+#include <xc.inc>
+
+psect code, abs
+
 main:
-	org 0x0
-	goto	setup
-	
-	org 0x100		    ; Main code starts here at address 0x100
+    org     0x0
+    goto    setup          
 
-	; ******* Programme FLASH read Setup Code ****  
-setup:	
-	bcf	CFGS	; point to Flash program memory  
-	bsf	EEPGD 	; access Flash program memory
-	goto	start
-	; ******* My data and where to put it in RAM *
+    org     0x100
+
+setup:
+    bcf     CFGS            ; select program memory
+    bsf     EEPGD           ; enable Flash access
+
+    movlw   0xFF
+    movwf   TRISD, A        ; PORTD as input (switches)
+    clrf    TRISC, A        ; PORTC as output (LEDs)
+    clrf    PORTC, A        ; clear LEDs
+
 myTable:
-	db	'T','h','i','s',' ','i','s',' ','j','u','s','t'
-	db	' ','s','o','m','e',' ','d','a','t','a'
-	myArray EQU 0x400	; Address in RAM for data
-	counter EQU 0x10	; Address of counter variable
-	align	2		; ensure alignment of subsequent instructions 
-	; ******* Main programme *********************
-start:	
-	lfsr	0, myArray	; Load FSR0 with address in RAM	
-	movlw	low highword(myTable)	; address of data in PM
-	movwf	TBLPTRU, A	; load upper bits to TBLPTRU
-	movlw	high(myTable)	; address of data in PM
-	movwf	TBLPTRH, A	; load high byte to TBLPTRH
-	movlw	low(myTable)	; address of data in PM
-	movwf	TBLPTRL, A	; load low byte to TBLPTRL
-	movlw	22		; 22 bytes to read
-	movwf 	counter, A	; our counter register
-loop:
-        tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
-	movff	TABLAT, POSTINC0	; move read data from TABLAT to (FSR0), increment FSR0	
-	decfsz	counter, A	; count down to zero
-	bra	loop		; keep going until finished
-	
-	goto	0
+    db  0x01
+    db  0x02
+    db  0x04
+    db  0x08
+    db  0x10
+    db  0x20
+    db  0x40
+    db  0x80               ; LED pattern table
 
-	end	main
+tableLen    EQU 8
+counter     EQU 0x10
+
+    align   2
+
+start:
+    movlw   low highword(myTable)
+    movwf   TBLPTRU, A     ; table pointer upper
+    movlw   high(myTable)
+    movwf   TBLPTRH, A     ; table pointer high
+    movlw   low(myTable)
+    movwf   TBLPTRL, A     ; table pointer low
+
+    movlw   tableLen
+    movwf   counter, A     ; number of bytes to read
+
+loop:
+    tblrd*+                ; read byte from Flash to TABLAT
+    movff   TABLAT, LATC   ; output to LEDs
+
+    call    delay          ; visible delay
+    call    delay 
+    call    delay 
+    call    delay
+    call    delay          ; visible delay
+    call    delay 
+    call    delay 
+    call    delay 
+    call    delay          ; visible delay
+    call    delay 
+    call    delay 
+    call    delay 
+    
+    
+    
+    decfsz  counter, A     ; next table entry
+    bra     loop
+
+    goto    start           ; restart pattern
+
+delay:
+    movf    PORTD, W, A    ; read switches
+    andlw   0xFF            ; mask RD0 RD2
+    addlw   0x01            ; avoid zero delay
+    movwf   0x11, A        ; outer delay count
+
+d1:
+    movlw   0xFF
+    movwf   0x12, A        ; inner delay count
+d2:
+    decfsz  0x12, A
+    bra     d2
+    decfsz  0x11, A
+    bra     d1
+    return
+
+end main
