@@ -70,12 +70,11 @@ loop:
 
 delay:
     movf    PORTD, W, A    ; read switches
-    andlw   0xFF	    
-    addlw   0x01            ; avoid zero delay
+    andlw   0xFF	   ; delay length
     movwf   0x11, A        ; outer delay count
 
 d1:
-    movlw   0xFF
+    movlw   0xFF	    ; delay length
     movwf   0x12, A        ; inner delay count
 d2:
     decfsz  0x12, A
