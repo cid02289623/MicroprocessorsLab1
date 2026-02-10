@@ -1,80 +1,122 @@
-; UPDATED
+;===========================================================
+; GPT generated code as a placeholder for our own
+; Creates a triangle function on port C and leaves pin RD0 for WR on converter
+;===========================================================
 #include <xc.inc>
 
 psect code, abs
 
+org 0x0000
+goto main
+
+org 0x0100
+
+count equ 0x20 ; DAC value
+dir equ 0x21 ; 0 = up, 1 = down
+
+;===========================================================
+; MAIN
+;===========================================================
 main:
-    org     0x0
-    goto    setup          
+; ----------- I/O setup -----------
+clrf TRISC, A ; PORTC all outputs (DAC data bus)
+clrf LATC, A ; start data at 0
 
-    org     0x100
+; PORTD: only RD0 is output (WR*). Keep other RD pins as inputs if you like.
+bcf TRISD, 0, A ; RD0 output
+bsf TRISD, 1, A ; RD1 input
+bsf TRISD, 2, A
+bsf TRISD, 3, A
+bsf TRISD, 4, A
+bsf TRISD, 5, A
+bsf TRISD, 6, A
+bsf TRISD, 7, A
 
-setup:
-    bcf     CFGS            ; select program memory
-    bsf     EEPGD           ; enable Flash access
+bsf LATD, 0, A ; WR* HIGH
 
-    movlw   0xFF
-    movwf   TRISD, A        ; PORTD as input (switches)
-    clrf    TRISC, A        ; PORTC as output (LEDs)
-    clrf    PORTC, A        ; clear LEDs
+; ----------- init waveform state -----------
+clrf count, A ; start at 0x00
+clrf dir, A ; start going "up"
 
-myTable:
-    db  0x01
-    db  0x02
-    db  0x04
-    db  0x08
-    db  0x10
-    db  0x20
-    db  0x40
-    db  0x80               ; LED pattern table
+;===========================================================
+; WAVEFORM LOOP
+;===========================================================
+wave_loop:
+; Write current sample to DAC
+movf count, W, A
+call dac_write_w
 
-tableLen    EQU 8
-counter     EQU 0x10
+; Delay controls output frequency
+call delay
 
-    align   2
+; Update count for triangle wave
+movf dir, W, A
+bz going_up ; if dir==0 -> going up
 
-start:
-    movlw   low highword(myTable)
-    movwf   TBLPTRU, A     ; table pointer upper
-    movlw   high(myTable)
-    movwf   TBLPTRH, A     ; table pointer high
-    movlw   low(myTable)
-    movwf   TBLPTRL, A     ; table pointer low
+;-----------------------------
+; going DOWN
+;-----------------------------
+going_down:
+decf count, F, A
+movf count, W, A
+bnz wave_loop ; if not yet 0, keep going down
 
-    movlw   tableLen
-    movwf   counter, A     ; number of bytes to read
+; hit 0x00 -> switch direction to UP
+clrf dir, A
+bra wave_loop
 
-loop:
-    tblrd*+                ; read byte from Flash to TABLAT
-    movff   TABLAT, LATC   ; output to LEDs
+;-----------------------------
+; going UP
+;-----------------------------
+going_up:
+incf count, F, A
+movf count, W, A
+xorlw 0xFF ; W = (count XOR 0xFF)
+bnz wave_loop ; if count != 0xFF keep going up
 
-    call    delay          ; visible delay
-    
-    
-    
-    decfsz  counter, A     ; next table entry
-    bra     loop
+; hit 0xFF -> switch direction to DOWN
+movlw 0x01
+movwf dir, A
+bra wave_loop
 
-    goto    start           ; restart pattern
+;===========================================================
+; dac_write_w
+; Input: WREG = byte to output
+; Action:
+; - Put W on LATC (data bus)
+; - Pulse WR* low -> high (DAC latches on rising edge)
+;===========================================================
+dac_write_w:
+movwf LATC, A ; present data on bus (PORTC outputs)
 
+; WR* pulse (active low)
+bcf LATD, 0, A ; WR* low: "writing"
+nop
+nop
+bsf LATD, 0, A ; WR* rising edge: latches into DAC
+
+return
+
+;===========================================================
+; delay
+; Simple nested delay.
+; Tweak the literals to change speed.
+;===========================================================
 delay:
-    movf    PORTD, W, A    ; read switches
-    movwf   0x11, A        ; outer delay count
+movlw 0x20 ; outer loop count (increase = slower)
+movwf 0x22, A
 
-d1:
-    movlw   0xFF	   ; delay length
-    movwf   0x12, A        ; inner delay count
-  
-d1a:
-    movlw   0xAA	    ; delay length
-    movwf   0x13, A   
-d2:
-    decfsz  0x13, A
-    bra     d2
-    decfsz  0x12, A
-    bra     d1a
-    decfsz  0x11, A
-    bra     d1
-    return
+dly_outer:
+movlw 0xFF ; inner loop count (increase = slower)
+movwf 0x23, A
 
-end main
+dly_inner:
+decfsz 0x23, F, A
+bra dly_inner
+
+decfsz 0x22, F, A
+bra dly_outer
+
+return
+
+end
