@@ -49,17 +49,6 @@ loop:
     movff   TABLAT, LATC   ; output to LEDs
 
     call    delay          ; visible delay
-    call    delay 
-    call    delay 
-    call    delay
-    call    delay          ; visible delay
-    call    delay 
-    call    delay 
-    call    delay 
-    call    delay          ; visible delay
-    call    delay 
-    call    delay 
-    call    delay 
     
     
     
@@ -70,15 +59,20 @@ loop:
 
 delay:
     movf    PORTD, W, A    ; read switches
-    andlw   0xFF	   ; delay length
     movwf   0x11, A        ; outer delay count
 
 d1:
-    movlw   0xFF	    ; delay length
+    movlw   0xFF	   ; delay length
     movwf   0x12, A        ; inner delay count
+  
+d1a:
+    movlw   0xAA	    ; delay length
+    movwf   0x13, A   
 d2:
-    decfsz  0x12, A
+    decfsz  0x13, A
     bra     d2
+    decfsz  0x12, A
+    bra     d1a
     decfsz  0x11, A
     bra     d1
     return
