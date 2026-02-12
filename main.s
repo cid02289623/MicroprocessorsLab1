@@ -12,13 +12,13 @@
 		clrf TRISD, A
 		bsf LATD, 0, A ; RD0 low
 		; PORTC all outputs
-		clrf TRISC, A
-		clrf LATC, A
+		clrf TRISJ, A
+		clrf LATJ, A
 		; Use file register 0x06 as counter
 		clrf 0x06, A
 	loop:
 		; Output value
-		movff 0x06, LATC
+		movff 0x06, LATJ
 		bcf LATD, 0, A ; RD0 low
 		nop
 		nop
