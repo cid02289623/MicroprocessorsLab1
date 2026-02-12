@@ -28,10 +28,10 @@
 		bra loop
 
 	delay:
-		movlw 0xFF
+		movlw 0x10
 		movwf 0x22, A
 	d1:
-		movlw 0xFF
+		movlw 0x10
 		movwf 0x23, A
 	d2:
 		decfsz 0x23, F, A
