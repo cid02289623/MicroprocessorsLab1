@@ -79,16 +79,4 @@ loop:
     call    spi2_tx  
     call    delay  
   
-    movlw   0x55  
-    call    spi2_tx  
-    call    delay  
-  
-    movlw   0xF0  
-    call    spi2_tx  
-    call    delay  
-  
-    movlw   0x0F  
-    call    spi2_tx  
-    call    delay  
-  
     bra     loop  
