@@ -1,54 +1,36 @@
 #include <xc.inc>
+psect code abs
+        
+ORG 0x100
+goto main
 
-PSECT resetVec,class=CODE,delta=2
-ORG 0x0000
-    goto main
-
-
-PSECT code,class=CODE,delta=2
-
-
-; =========================
-; SPI MASTER INIT (SSP2)
-; =========================
 SPI_MasterInit:
-
-    ; RD4 (SDO2) output
-    bcf     TRISD, 4
-
-    ; RD6 (SCK2) output
-    bcf     TRISD, 6
-
-    ; Clear SPI module
-    clrf    SSP2CON1
-
-    ; Enable SPI
-    bsf     SSP2CON1, 5     ; SSPEN
-
+    
+    bcf CKE2
+    
+    movlw   (SSP2CON1_SSPEN_MASK) | (SSP2CON1_CKP_MASK) | (SSP2CON1_SSPM1_MASK)
+    movwf   SSP2CON1, A
+    
+    bcf     TRISD, 4, A
+    bcf     TRISD, 6, A
     return
 
 SPI_MasterTransmit:
-
     movwf   SSP2BUF
 
 Wait_Transmit:
-    btfss   PIR3, 7         ; SSP2IF
+    btfss   PIR2, 5         ; SSP2IF
     bra     Wait_Transmit
-
-    bcf     PIR3, 7
+    bcf     PIR2, 5
     return
 
-
-; =========================
-; SIMPLE DELAY
-; =========================
 delay:
 
-    movlw   0x01
+    movlw   0x10
     movwf   0x20
 
 d1:
-    movlw   0x01
+    movlw   0x10
     movwf   0x21
 
 d2:
@@ -61,29 +43,12 @@ d2:
     return
 
 
-; =========================
-; MAIN
-; =========================
 main:
-
     call    SPI_MasterInit
-
 loop:
 
     movlw   0xAA
     call    SPI_MasterTransmit
-    call    delay
-
-    movlw   0x55
-    call    SPI_MasterTransmit
-    call    delay
-
-    movlw   0xF0
-    call    SPI_MasterTransmit
-    call    delay
-
-    movlw   0x0F
-    call    SPI_MasterTransmit
-    call    delay
+    call delay
 
     bra     loop
