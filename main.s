@@ -1,8 +1,34 @@
 #include <xc.inc>
 psect code abs
         
-ORG 0x100
+ORG 0x000
 goto main
+ 
+delay_one_second:
+
+    movlw 0x10
+    movwf 0x20       ; outer loop = 16
+
+outer_loop:
+    movlw 0xD0
+    movwf 0x21       ; middle loop = 208
+
+middle_loop:
+    movlw 0xD0
+    movwf 0x22       ; inner loop = 208
+
+inner_loop:
+    decfsz 0x22, F
+    bra inner_loop
+
+    decfsz 0x21, F
+    bra middle_loop
+
+    decfsz 0x20, F
+    bra outer_loop
+
+    return
+
 
 SPI_MasterInit:
     
@@ -19,28 +45,12 @@ SPI_MasterTransmit:
     movwf   SSP2BUF
 
 Wait_Transmit:
-    btfss   PIR2, 5         ; SSP2IF
+    btfss   PIR2, 5
     bra     Wait_Transmit
     bcf     PIR2, 5
-    return
+return
 
-delay:
 
-    movlw   0x10
-    movwf   0x20
-
-d1:
-    movlw   0x10
-    movwf   0x21
-
-d2:
-    decfsz  0x21, F
-    bra     d2
-
-    decfsz  0x20, F
-    bra     d1
-
-    return
 
 
 main:
@@ -49,6 +59,10 @@ loop:
 
     movlw   0xAA
     call    SPI_MasterTransmit
-    call delay
+    call    delay_one_second
+    
+    movlw   0x55
+    call    SPI_MasterTransmit
+    call    delay_one_second
 
     bra     loop
