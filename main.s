@@ -1,62 +1,32 @@
 ; GPT generated code as an example of what is required 
     
     #include <xc.inc>  
-  
-;============================================================  
-; Reset vector  
-;============================================================  
-psect   resetVec, class=CODE, reloc=2, abs  
-org     0x0000  
+
+    psect abs  
+    org     0x100  
     goto    main  
+
   
-;============================================================  
-; Code  
-;============================================================  
-psect   code, class=CODE, reloc=2  
-  
-;------------------------------------------------------------  
-; SPI2 init (per starter-slides style):  
-; - clear CKE (clock edge "negative" in their wording)  
-; - SSP2CON1 = SSPEN + CKP + SSPM1  (Master, Fosc/64, idle high)  
-; - RD4 (SDO2) output, RD6 (SCK2) output  
-;------------------------------------------------------------  
-spi2_init:  
-    ; Set clock edge "negative" (CKE=0)  
-    bcf     SSP2STAT, 6, A        ; CKE = bit6  
-  
-    ; SSP2CON1: SSPEN(bit5)=1, CKP(bit4)=1, SSPM1(bit1)=1 => 0x32  
-    movlw   0x32  
-    movwf   SSP2CON1, A  
+
+SPI_MsaterInit:  
+    bcf     (SSPCON1_SSPEN_MASK) | (SSP2CON1_CK_MASK) | (SSP2CON1_SSPM1_MASK)
+    movlw SSP2CON1, A  
   
     ; Pin directions: RD4=SDO2 output, RD6=SCK2 output  
-    bcf     TRISD, 4, A           ; RD4 output  
-    bcf     TRISD, 6, A           ; RD6 output  
-  
-    ; Clear SPI2 interrupt flag (SSP2IF is PIR2 bit5)  
-    bcf     PIR2, 5, A  
+    bcf     TRISD, PORTD_SD02_POSN, A           ; RD4 output  
+    bcf     TRISD, PORTD_SCK2_POSN, A           ; RD6 output  
     return  
+    
+SPI_MasterTransmit: ;transmit data held in W
+    movwf SSP2BUF, A  ; write data to output buffer
   
-;------------------------------------------------------------  
-; SPI2 transmit  
-; Input: WREG = byte to send  
-; Wait on SSP2IF (PIR2 bit5), then clear it.  
-;------------------------------------------------------------  
-spi2_tx:  
-    movwf   SSP2BUF, A            ; start transfer  
-  
-wait_tx:  
-    btfss   PIR2, 5, A            ; wait SSP2IF=1  
-    bra     wait_tx  
-    bcf     PIR2, 5, A            ; clear SSP2IF  
-  
-    ; (Recommended robustness: read buffer to clear BF)  
-    movf    SSP2BUF, W, A  
-  
-    return  
-  
-;------------------------------------------------------------  
-; Small delay (adjust as needed)  
-;------------------------------------------------------------  
+Wait_Transmit:
+	btfss PIR2, 5
+    sent
+	bra Wait_Transmit
+	bcf PIR2, 5
+	return
+
 delay:  
     movlw   0xFF  
     movwf   0x20, A  
@@ -72,23 +42,23 @@ d2: decfsz  0x21, F, A
 ; Main: send test patterns forever  
 ;------------------------------------------------------------  
 main:  
-    call    spi2_init  
+    call    SPI_MasterInit  
   
 loop:  
     movlw   0xAA  
-    call    spi2_tx  
+    call    SPI_MasterTransmit  
     call    delay  
   
     movlw   0x55  
-    call    spi2_tx  
+    call    SPI_MasterTransmit  
     call    delay  
   
     movlw   0xF0  
-    call    spi2_tx  
+    call    SPI_MasterTransmit  
     call    delay  
   
     movlw   0x0F  
-    call    spi2_tx  
+    call    SPI_MasterTransmit  
     call    delay  
   
     bra     loop  
