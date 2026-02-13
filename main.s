@@ -2,7 +2,7 @@
     
     #include <xc.inc>  
 
-    psect abs  
+    psect code abs  
     org     0x100  
     goto    main  
 
