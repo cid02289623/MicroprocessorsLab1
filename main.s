@@ -1,64 +1,89 @@
-; GPT generated code as an example of what is required 
-    
-    #include <xc.inc>  
+#include <xc.inc>
 
-    psect code abs  
-    org     0x100  
-    goto    main  
+PSECT resetVec,class=CODE,delta=2
+ORG 0x0000
+    goto main
 
-  
 
-SPI_MsaterInit:  
-    bcf     (SSPCON1_SSPEN_MASK) | (SSP2CON1_CK_MASK) | (SSP2CON1_SSPM1_MASK)
-    movlw SSP2CON1, A  
-  
-    ; Pin directions: RD4=SDO2 output, RD6=SCK2 output  
-    bcf     TRISD, PORTD_SD02_POSN, A           ; RD4 output  
-    bcf     TRISD, PORTD_SCK2_POSN, A           ; RD6 output  
-    return  
-    
-SPI_MasterTransmit: ;transmit data held in W
-    movwf SSP2BUF, A  ; write data to output buffer
-  
+PSECT code,class=CODE,delta=2
+
+
+; =========================
+; SPI MASTER INIT (SSP2)
+; =========================
+SPI_MasterInit:
+
+    ; RD4 (SDO2) output
+    bcf     TRISD, 4
+
+    ; RD6 (SCK2) output
+    bcf     TRISD, 6
+
+    ; Clear SPI module
+    clrf    SSP2CON1
+
+    ; Enable SPI
+    bsf     SSP2CON1, 5     ; SSPEN
+
+    return
+
+SPI_MasterTransmit:
+
+    movwf   SSP2BUF
+
 Wait_Transmit:
-	btfss PIR2, 5
-    sent
-	bra Wait_Transmit
-	bcf PIR2, 5
-	return
+    btfss   PIR3, 7         ; SSP2IF
+    bra     Wait_Transmit
 
-delay:  
-    movlw   0xFF  
-    movwf   0x20, A  
-d1: movlw   0xFF  
-    movwf   0x21, A  
-d2: decfsz  0x21, F, A  
-    bra     d2  
-    decfsz  0x20, F, A  
-    bra     d1  
-    return  
-  
-;------------------------------------------------------------  
-; Main: send test patterns forever  
-;------------------------------------------------------------  
-main:  
-    call    SPI_MasterInit  
-  
-loop:  
-    movlw   0xAA  
-    call    SPI_MasterTransmit  
-    call    delay  
-  
-    movlw   0x55  
-    call    SPI_MasterTransmit  
-    call    delay  
-  
-    movlw   0xF0  
-    call    SPI_MasterTransmit  
-    call    delay  
-  
-    movlw   0x0F  
-    call    SPI_MasterTransmit  
-    call    delay  
-  
-    bra     loop  
+    bcf     PIR3, 7
+    return
+
+
+; =========================
+; SIMPLE DELAY
+; =========================
+delay:
+
+    movlw   0x01
+    movwf   0x20
+
+d1:
+    movlw   0x01
+    movwf   0x21
+
+d2:
+    decfsz  0x21, F
+    bra     d2
+
+    decfsz  0x20, F
+    bra     d1
+
+    return
+
+
+; =========================
+; MAIN
+; =========================
+main:
+
+    call    SPI_MasterInit
+
+loop:
+
+    movlw   0xAA
+    call    SPI_MasterTransmit
+    call    delay
+
+    movlw   0x55
+    call    SPI_MasterTransmit
+    call    delay
+
+    movlw   0xF0
+    call    SPI_MasterTransmit
+    call    delay
+
+    movlw   0x0F
+    call    SPI_MasterTransmit
+    call    delay
+
+    bra     loop
