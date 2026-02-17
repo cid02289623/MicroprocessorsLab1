@@ -1,7 +1,7 @@
 #include <xc.inc>
 
-global  LCD_Setup, LCD_Write_Message
-
+global  LCD_Setup, LCD_Write_Message, delay_seconds, LCD_clear_display, LCD_shift_right, LCD_shift_left, LCD_second_line
+    
 psect	udata_acs   ; named variables in access ram
 LCD_cnt_l:	ds 1   ; reserve 1 byte for variable LCD_cnt_l
 LCD_cnt_h:	ds 1   ; reserve 1 byte for variable LCD_cnt_h
@@ -9,10 +9,9 @@ LCD_cnt_ms:	ds 1   ; reserve 1 byte for ms counter
 LCD_tmp:	ds 1   ; reserve 1 byte for temporary use
 LCD_counter:	ds 1   ; reserve 1 byte for counting through nessage
 LCD_cnt_S:	ds 1	; reserve 1 byte for s counter
-LCD_scroll_pos: ds 1    ; current starting position of scroll window
-LCD_msg_len:   ds 1     ; length of message
-
-
+LCD_n_shift_right_ctn:	ds 1
+LCD_n_shift_left_ctn:	ds 1
+    
 	LCD_E	EQU 5	; LCD enable bit
     	LCD_RS	EQU 4	; LCD register select bit
 
@@ -136,12 +135,14 @@ lcdlp1:	decf 	LCD_cnt_l, F, A	; no carry when 0x00 -> 0xff
 	bc 	lcdlp1		; carry, then loop again
 	return			; carry reset so return
 
-
-delay_one_second:
+delay_seconds:	;   takes number of seconds as W
+	movwf   LCD_cnt_S   ; outer loop counter
+	movlw	4
+	mulwf	LCD_cnt_S
+	movf    PRODL, W    ; move lower byte of result to W
+	movwf	LCD_cnt_S
 	movlw   250         ; 250 ms chunks
 	movwf   LCD_cnt_ms  ; reuse ms counter register
-	movlw   4           ; 4 * 250ms = 1 second
-	movwf   LCD_cnt_S   ; outer loop counter
 delay_one_second_outer:
 	movf    LCD_cnt_ms, W
 	call    LCD_delay_ms ; delay 250 ms
@@ -149,7 +150,41 @@ delay_one_second_outer:
 	bra     delay_one_second_outer
 	return
 
+LCD_clear_display:
+    	movlw	00000001B	; display clear
+	call	LCD_Send_Byte_I
+	movlw	2		; wait 2ms
+	call	LCD_delay_ms
+	return
 
+LCD_shift_left: ; shifts left the value in W
+	movwf	LCD_n_shift_left_ctn
+LCD_shift_left_inner:
+	movlw	0000010001B
+	call	LCD_Send_Byte_I
+	movlw	10		; wait 40us
+	call	LCD_delay_x4us
+	decfsz	LCD_n_shift_left_ctn
+	bra	LCD_shift_left_inner
+	return
+	
+LCD_shift_right: ; shifts right the value in W
+	movwf	LCD_n_shift_right_ctn
+LCD_shift_right_inner:
+	movlw	0000010101B
+	call	LCD_Send_Byte_I
+	movlw	10		; wait 40us
+	call	LCD_delay_x4us
+	decfsz	LCD_n_shift_right_ctn
+	bra	LCD_shift_right_inner
+	return
 
+LCD_second_line:
+	movlw 0xC0      ; DDRAM address for line 2
+	call LCD_Send_Byte_I
+	movlw	10		; wait 40us
+	call	LCD_delay_x4us
+	return
+	
 	end
 
