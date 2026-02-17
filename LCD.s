@@ -8,6 +8,10 @@ LCD_cnt_h:	ds 1   ; reserve 1 byte for variable LCD_cnt_h
 LCD_cnt_ms:	ds 1   ; reserve 1 byte for ms counter
 LCD_tmp:	ds 1   ; reserve 1 byte for temporary use
 LCD_counter:	ds 1   ; reserve 1 byte for counting through nessage
+LCD_cnt_S:	ds 1	; reserve 1 byte for s counter
+LCD_scroll_pos: ds 1    ; current starting position of scroll window
+LCD_msg_len:   ds 1     ; length of message
+
 
 	LCD_E	EQU 5	; LCD enable bit
     	LCD_RS	EQU 4	; LCD register select bit
@@ -133,6 +137,19 @@ lcdlp1:	decf 	LCD_cnt_l, F, A	; no carry when 0x00 -> 0xff
 	return			; carry reset so return
 
 
-    end
+delay_one_second:
+	movlw   250         ; 250 ms chunks
+	movwf   LCD_cnt_ms  ; reuse ms counter register
+	movlw   4           ; 4 * 250ms = 1 second
+	movwf   LCD_cnt_S   ; outer loop counter
+delay_one_second_outer:
+	movf    LCD_cnt_ms, W
+	call    LCD_delay_ms ; delay 250 ms
+	decfsz  LCD_cnt_S, F
+	bra     delay_one_second_outer
+	return
 
+
+
+	end
 
