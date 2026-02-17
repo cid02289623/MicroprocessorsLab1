@@ -1,7 +1,7 @@
 #include <xc.inc>
 
 extrn	UART_Setup, UART_Transmit_Message  ; external subroutines
-extrn	LCD_Setup, LCD_Write_Message
+extrn	LCD_Setup, LCD_Write_Message, LCD_second_line, LCD_shift_right, LCD_shift_left
 	
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
@@ -13,9 +13,9 @@ myArray:    ds 0x80 ; reserve 128 bytes for message data
 psect	data    
 	; ******* myTable, data in programme memory, and its length *****
 myTable:
-	db	'H','e','l','l','o',' ','W','o','r','l','d','!',0x0a
+	db	'B','O','T','T','O','M',' ','T','E','X','T',0x0a
 					; message, plus carriage return
-	myTable_l   EQU	13	; length of data
+	myTable_l   EQU	12	; length of data
 	align	2
     
 psect	code, abs	
@@ -30,7 +30,11 @@ setup:	bcf	CFGS	; point to Flash program memory
 	goto	start
 	
 	; ******* Main programme ****************************************
-start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
+start: 	call	LCD_second_line
+	movlw	2
+	call	LCD_shift_right
+
+	lfsr	0, myArray	; Load FSR0 with address in RAM	
 	movlw	low highword(myTable)	; address of data in PM
 	movwf	TBLPTRU, A		; load upper bits to TBLPTRU
 	movlw	high(myTable)	; address of data in PM
@@ -52,6 +56,9 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	addlw	0xff		; don't send the final carriage return to LCD
 	lfsr	2, myArray
 	call	LCD_Write_Message
+	
+	movlw	53
+	call LCD_shift_left
 
 	goto	$		; goto current line in code
 
