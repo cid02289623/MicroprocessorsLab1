@@ -18,6 +18,7 @@ middle_loop:
     movwf 0x22       ; inner loop = 208
 
 inner_loop:
+
     decfsz 0x22, F
     bra inner_loop
 
@@ -57,11 +58,59 @@ main:
     call    SPI_MasterInit
 loop:
 
-    movlw   0xAA
+    movlw   0x01
     call    SPI_MasterTransmit
     call    delay_one_second
     
-    movlw   0x55
+    movlw   0x03
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x07
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x0F
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x1F
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x3f
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x7F
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0xFF
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x00
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0xFF
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x00
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0xFF
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0x00
+    call    SPI_MasterTransmit
+    call    delay_one_second
+    
+    movlw   0xFF
     call    SPI_MasterTransmit
     call    delay_one_second
 
