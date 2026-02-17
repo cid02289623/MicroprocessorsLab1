@@ -1,70 +1,143 @@
 #include <xc.inc>
 
-extrn	UART_Setup, UART_Transmit_Message  ; external subroutines
-extrn	LCD_Setup, LCD_Write_Message, LCD_second_line, LCD_shift_right, LCD_shift_left
+extrn   UART_Setup, UART_Transmit_Message
+extrn   LCD_Setup, LCD_Write_PM_Message, LCD_first_line, LCD_second_line
+extrn   LCD_clear_display, LCD_shift_left, LCD_shift_right
+extrn   delay_seconds, LCD_delay_ms
+
+psect   udata_acs
+btn_last:   ds 1
+
+; Program memory strings
+psect   data
+
+TopMsg:
+    db  'H','A','L',' ','9','0','0','0',':'
+TopMsg_l EQU 9
+align 2
+
+BottomMsg:
+    db  'B','O','T','T','O','M',' ','T','E','X','T'
+BottomMsg_l EQU 11
+align 2
+
+AltMsg:
+    db  'P','R','E','S','S','E','D','!'
+AltMsg_l EQU 8
+align 2
+
+psect   code, abs
+rst:    org 0x0000
+        goto    setup
+
+setup:
+        ; Program Flash read setup
+        bcf     CFGS
+        bsf     EEPGD
+
+        call    UART_Setup
+        call    LCD_Setup
+
+        ; RD6 input (button)
+        bsf     TRISD, 6, A
+
+        clrf    btn_last, A
+
+        goto    draw_not_pressed
+
+draw_not_pressed:
+        call    LCD_clear_display
+
+        call    LCD_first_line
+        movlw   low highword(TopMsg)
+        movwf   TBLPTRU, A
+        movlw   high(TopMsg)
+        movwf   TBLPTRH, A
+        movlw   low(TopMsg)
+        movwf   TBLPTRL, A
+        movlw   TopMsg_l
+        call    LCD_Write_PM_Message
+
+        call    LCD_second_line
+        movlw   low highword(BottomMsg)
+        movwf   TBLPTRU, A
+        movlw   high(BottomMsg)
+        movwf   TBLPTRH, A
+        movlw   low(BottomMsg)
+        movwf   TBLPTRL, A
+        movlw   BottomMsg_l
+        call    LCD_Write_PM_Message
 	
-psect	udata_acs   ; reserve data space in access ram
-counter:    ds 1    ; reserve one byte for a counter variable
-delay_count:ds 1    ; reserve one byte for counter in the delay routine
+
+        bra     main_loop
+
+draw_pressed:
+        call    LCD_clear_display
+        call    LCD_second_line
+
+        movlw   low highword(AltMsg)
+        movwf   TBLPTRU, A
+        movlw   high(AltMsg)
+        movwf   TBLPTRH, A
+        movlw   low(AltMsg)
+        movwf   TBLPTRL, A
+        movlw   AltMsg_l
+        call    LCD_Write_PM_Message
+
+        bra     main_loop
+
+main_loop:
+    btfss   PORTD, 6, A    
+    bra     not_pressed     
+
+pressed:
+    call    LCD_clear_display
+    call    LCD_second_line
+
+    movlw   low highword(AltMsg)
+    movwf   TBLPTRU, A
+    movlw   high(AltMsg)
+    movwf   TBLPTRH, A
+    movlw   low(AltMsg)
+    movwf   TBLPTRL, A
+    movlw   AltMsg_l
+    call    LCD_Write_PM_Message
     
-psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
-myArray:    ds 0x80 ; reserve 128 bytes for message data
+    movlw   1
+    call    delay_seconds
 
-psect	data    
-	; ******* myTable, data in programme memory, and its length *****
-myTable:
-	db	'B','O','T','T','O','M',' ','T','E','X','T',0x0a
-					; message, plus carriage return
-	myTable_l   EQU	12	; length of data
-	align	2
-    
-psect	code, abs	
-rst: 	org 0x0
- 	goto	setup
+    bra     main_loop
 
-	; ******* Programme FLASH read Setup Code ***********************
-setup:	bcf	CFGS	; point to Flash program memory  
-	bsf	EEPGD 	; access Flash program memory
-	call	UART_Setup	; setup UART
-	call	LCD_Setup	; setup UART
-	goto	start
-	
-	; ******* Main programme ****************************************
-start: 	call	LCD_second_line
-	movlw	2
-	call	LCD_shift_right
+not_pressed:
+    call    LCD_clear_display
 
-	lfsr	0, myArray	; Load FSR0 with address in RAM	
-	movlw	low highword(myTable)	; address of data in PM
-	movwf	TBLPTRU, A		; load upper bits to TBLPTRU
-	movlw	high(myTable)	; address of data in PM
-	movwf	TBLPTRH, A		; load high byte to TBLPTRH
-	movlw	low(myTable)	; address of data in PM
-	movwf	TBLPTRL, A		; load low byte to TBLPTRL
-	movlw	myTable_l	; bytes to read
-	movwf 	counter, A		; our counter register
-loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
-	movff	TABLAT, POSTINC0; move data from TABLAT to (FSR0), inc FSR0	
-	decfsz	counter, A		; count down to zero
-	bra	loop		; keep going until finished
-		
-	movlw	myTable_l	; output message to UART
-	lfsr	2, myArray
-	call	UART_Transmit_Message
+    ; Top line
+    call    LCD_first_line
+    movlw   low highword(TopMsg)
+    movwf   TBLPTRU, A
+    movlw   high(TopMsg)
+    movwf   TBLPTRH, A
+    movlw   low(TopMsg)
+    movwf   TBLPTRL, A
+    movlw   TopMsg_l
+    call    LCD_Write_PM_Message
 
-	movlw	myTable_l	; output message to LCD
-	addlw	0xff		; don't send the final carriage return to LCD
-	lfsr	2, myArray
-	call	LCD_Write_Message
-	
-	movlw	53
-	call LCD_shift_left
+    ; Bottom line
+    call    LCD_second_line
+    movlw   low highword(BottomMsg)
+    movwf   TBLPTRU, A
+    movlw   high(BottomMsg)
+    movwf   TBLPTRH, A
+    movlw   low(BottomMsg)
+    movwf   TBLPTRL, A
+    movlw   BottomMsg_l
+    call    LCD_Write_PM_Message
+ 
+    movlw   1
+    call    delay_seconds
 
-	goto	$		; goto current line in code
 
-	; a delay subroutine if you need one, times around loop in delay_count
-delay:	decfsz	delay_count, A	; decrement until zero
-	bra	delay
-	return
+    bra     main_loop
 
-	end	rst
+
+        end     rst
