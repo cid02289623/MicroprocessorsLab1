@@ -1,12 +1,12 @@
-;========================
-; main.s
-;========================
 #include <xc.inc>
 
-extrn   KeyPad_Setup, KeyPad_LCD_Service
-extrn   LCD_Setup, LCD_clear_display, LCD_first_line, LCD_second_line
-extrn   LCD_Write_Char
-extrn   ADC_Setup, ADC_Read, ADC_Print_Dec4
+; ----- external modules -----
+extrn   LCD_Setup, LCD_clear_display, LCD_first_line
+extrn   LCD_Write_Char, LCD_delay_ms
+
+extrn   ADC_Setup
+extrn   ADC_Read_mV
+extrn   LCD_display_ADC_mV
 
 psect   code, abs
 rst:    org     0x0000
@@ -16,45 +16,24 @@ psect   code
 start:
         call    LCD_Setup
         call    LCD_clear_display
-        call    KeyPad_Setup
         call    ADC_Setup
 
 main_loop:
-        ; ----- KEYPAD OUTPUT: FORCE LINE 1 -----
-        call    LCD_first_line           ; always reset cursor before keypad prints
-        call    KeyPad_LCD_Service
+        call    ADC_Read_mV
 
-        ; ----- ADC OUTPUT: FORCE LINE 2 -----
-        call    ADC_Read
-        call    LCD_second_line          ; always print ADC at start of line 2
-        call    ADC_Print_Dec4
+        call    LCD_first_line
+        call    LCD_display_ADC_mV
 
-        ; wipe the rest of line 2 so old keypad junk disappears
-        movlw   ' '
+        movlw   'm'
         call    LCD_Write_Char
-        movlw   ' '
+        movlw   'V'
         call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
-        movlw   ' '
-        call    LCD_Write_Char
+
+        movlw   250
+        call    LCD_delay_ms
+        movlw   250
+        call    LCD_delay_ms
 
         bra     main_loop
 
-        end     rst
+end
