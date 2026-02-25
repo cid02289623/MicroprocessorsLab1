@@ -13,6 +13,7 @@ global  LCD_delay_ms
 global  LCD_Write_Char
 global  LCD_shift_right_crsr
 global  LCD_shift_left_crsr
+global  LCD_Send_Byte_D
 
 psect   udata_acs
 LCD_cnt_l:               ds 1
